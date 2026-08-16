@@ -1,4 +1,4 @@
-# Jarvis
+<img width="1243" height="1264" alt="image" src="https://github.com/user-attachments/assets/2c52a21a-4d7e-4547-8fce-1b6f331bf6d8" /># Jarvis
 
 An Obsidian-backed personal assistant that answers from your notes, with a desktop shell and a public BYOK demo.
 
