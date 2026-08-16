@@ -8,7 +8,9 @@ An Obsidian-backed personal assistant that answers from your notes, with a deskt
 
 **[Live demo → https://agent15365.hackclub.app](https://agent15365.hackclub.app)**
 
-Claim a seat (4 users per IP), paste an OpenAI-compatible API key for the session, then chat. The key stays in browser memory only — rotate it after you finish.
+Claim a seat (4 users per IP), paste an OpenAI-compatible API key for the session, then chat. The key stays in browser memory only — rotate it after you finish. The live demo has dashboard features disabled because it relies on locally run voice LLM's to function. All other functionalities besides the voice LLM and timers still work, including a TO-DO list with changes that have yet to be fully implemented (only partially implemented, they still function)
+
+This demo is mainly used to test different chunking methods and the RAG feature of the LLM. Please report any bugs that you find.
 
 ## Quick start
 
@@ -69,7 +71,7 @@ npm run tauri:dev
 
 ## How it works
 
-Retrieval is a single `RetrievalEngine` contract. The production path is **Postgres hybrid**: metadata filter → TTL result cache → vector ANN + FTS fused with reciprocal rank fusion → optional entity neighborhood → LLM rerank → answer. Chat orchestration for that path runs through **LangGraph** (`app/retrieval/graph.py`) so Local / Global / DRIFT / Auto modes and an agentic grade→rewrite→retry loop stream cleanly over SSE.
+Retrieval is a single `RetrievalEngine` contract. The production path is **Postgres hybrid**: metadata filter → TTL result cache → vector ANN + FTS fused with reciprocal rank fusion → optional entity neighborhood → LLM rerank → answer. Chat orchestration for that path runs through **LangGraph** (`app/retrieval/graph.py`) so Local / Global / DRIFT / Auto modes and an agentic grade→rewrite→retry loop stream cleanly over SSE. 
 
 Policy is separate from prompting: `PolicyEngine` reads frontmatter in `config/rules.md` and enforces vault write paths and tool permissions. The public demo leases a short-lived seat per IP, then requires a session LLM key in the browser so the server never holds users’ chat credentials.
 
