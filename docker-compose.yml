@@ -1,0 +1,29 @@
+# Local Postgres + pgvector for hybrid RAG (JARVIS_DATABASE_URL).
+# Lab defaults: user/password/db = jarvis. Override via POSTGRES_* in .env.
+# Bind is loopback-only — do not change to 0.0.0.0.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jarvis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jarvis}
+      POSTGRES_DB: ${POSTGRES_DB:-jarvis}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - jarvis_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  jarvis_pgdata:

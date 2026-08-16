@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-get-api-token"
+description = "Allows the frontend to read the session API token for the sidecar."
+commands.allow = ["get_api_token"]

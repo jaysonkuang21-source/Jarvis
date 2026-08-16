@@ -1,0 +1,245 @@
+{
+  "version": 1,
+  "models": {
+    "nomic-embed-text": {
+      "hf_id": "nomic-ai/nomic-embed-text-v1.5",
+      "parameter_b": 0.137,
+      "est_vram_mb": 500,
+      "size_bytes": 274000000,
+      "tier": "tiny",
+      "roles": {
+        "embedding": 80,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "Legacy local embedding model (768-dim)."
+    },
+    "qwen3-embedding:8b": {
+      "hf_id": "Qwen/Qwen3-Embedding-8B",
+      "parameter_b": 7.6,
+      "est_vram_mb": 5000,
+      "size_bytes": 4700000000,
+      "tier": "medium",
+      "roles": {
+        "embedding": 96,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "Pinned Jarvis embedding model (4096-dim). Keep fixed after index."
+    },
+    "mxbai-embed-large": {
+      "hf_id": "mixedbread-ai/mxbai-embed-large-v1",
+      "parameter_b": 0.335,
+      "est_vram_mb": 700,
+      "size_bytes": 670000000,
+      "tier": "small",
+      "roles": {
+        "embedding": 88,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "Strong general embedding alternative (1024-dim)."
+    },
+    "all-minilm": {
+      "hf_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "parameter_b": 0.022,
+      "est_vram_mb": 200,
+      "size_bytes": 90000000,
+      "tier": "tiny",
+      "roles": {
+        "embedding": 70,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "Tiny/fast embedder when VRAM is scarce (384-dim)."
+    },
+    "bge-m3": {
+      "hf_id": "BAAI/bge-m3",
+      "parameter_b": 0.56,
+      "est_vram_mb": 1200,
+      "size_bytes": 1200000000,
+      "tier": "medium",
+      "roles": {
+        "embedding": 90,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "Multilingual dense retrieve; heavier than nomic."
+    },
+    "text-embedding-3-small": {
+      "hf_id": null,
+      "parameter_b": null,
+      "est_vram_mb": 0,
+      "size_bytes": 0,
+      "tier": "small",
+      "roles": {
+        "embedding": 94,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "OpenAI cloud embed; fits when API key present."
+    },
+    "text-embedding-3-large": {
+      "hf_id": null,
+      "parameter_b": null,
+      "est_vram_mb": 0,
+      "size_bytes": 0,
+      "tier": "medium",
+      "roles": {
+        "embedding": 96,
+        "chat": 0,
+        "voice": 0,
+        "chunk_decision": 0,
+        "extraction": 0,
+        "rerank": 0
+      },
+      "notes": "OpenAI large embed; highest cloud quality."
+    },
+    "qwen2.5:3b": {
+      "hf_id": "Qwen/Qwen2.5-3B-Instruct",
+      "parameter_b": 3.0,
+      "est_vram_mb": 2800,
+      "size_bytes": 1900000000,
+      "tier": "tiny",
+      "roles": {
+        "embedding": 0,
+        "chat": 62,
+        "voice": 90,
+        "chunk_decision": 86,
+        "extraction": 55,
+        "rerank": 84
+      },
+      "notes": "Legacy fast utility model for decide/rerank."
+    },
+    "qwen3.5:2b": {
+      "hf_id": "Qwen/Qwen3.5-2B",
+      "parameter_b": 2.3,
+      "est_vram_mb": 2800,
+      "size_bytes": 2700000000,
+      "tier": "tiny",
+      "roles": {
+        "embedding": 0,
+        "chat": 58,
+        "voice": 96,
+        "chunk_decision": 94,
+        "extraction": 78,
+        "rerank": 92
+      },
+      "notes": "Default local utility + voice model: rerank, evaluate, chunk decision, light extract, voice."
+    },
+    "qwen3:8b": {
+      "hf_id": "Qwen/Qwen3-8B",
+      "parameter_b": 8.0,
+      "est_vram_mb": 5500,
+      "size_bytes": 5000000000,
+      "tier": "medium",
+      "roles": {
+        "embedding": 0,
+        "chat": 84,
+        "voice": 55,
+        "chunk_decision": 70,
+        "extraction": 86,
+        "rerank": 72
+      },
+      "notes": "Default local chat/extraction balance."
+    },
+    "qwen3.5:9b": {
+      "hf_id": "Qwen/Qwen3.5-9B",
+      "parameter_b": 9.0,
+      "est_vram_mb": 6500,
+      "size_bytes": 5800000000,
+      "tier": "medium",
+      "roles": {
+        "embedding": 0,
+        "chat": 94,
+        "voice": 40,
+        "chunk_decision": 68,
+        "extraction": 88,
+        "rerank": 70
+      },
+      "notes": "Default local main chat/answer model (OpenAI also selectable)."
+    },
+    "gpt-4o-mini": {
+      "hf_id": null,
+      "parameter_b": null,
+      "est_vram_mb": 0,
+      "size_bytes": 0,
+      "tier": "small",
+      "roles": {
+        "embedding": 0,
+        "chat": 86,
+        "voice": 78,
+        "chunk_decision": 82,
+        "extraction": 84,
+        "rerank": 80
+      },
+      "notes": "Inexpensive OpenAI chat/tools model."
+    },
+    "gpt-4o": {
+      "hf_id": null,
+      "parameter_b": null,
+      "est_vram_mb": 0,
+      "size_bytes": 0,
+      "tier": "large",
+      "roles": {
+        "embedding": 0,
+        "chat": 95,
+        "voice": 50,
+        "chunk_decision": 78,
+        "extraction": 92,
+        "rerank": 78
+      },
+      "notes": "Strong OpenAI multimodal chat."
+    },
+    "gpt-4.1-mini": {
+      "hf_id": null,
+      "parameter_b": null,
+      "est_vram_mb": 0,
+      "size_bytes": 0,
+      "tier": "small",
+      "roles": {
+        "embedding": 0,
+        "chat": 88,
+        "voice": 80,
+        "chunk_decision": 84,
+        "extraction": 86,
+        "rerank": 82
+      },
+      "notes": "Long-context OpenAI mini."
+    },
+    "gpt-4.1": {
+      "hf_id": null,
+      "parameter_b": null,
+      "est_vram_mb": 0,
+      "size_bytes": 0,
+      "tier": "large",
+      "roles": {
+        "embedding": 0,
+        "chat": 97,
+        "voice": 48,
+        "chunk_decision": 75,
+        "extraction": 94,
+        "rerank": 76
+      },
+      "notes": "Top OpenAI long-context chat."
+    }
+  }
+}

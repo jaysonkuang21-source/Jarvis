@@ -1,0 +1,19 @@
+# Keep the Render/Docker image free of secrets and local junk.
+.git
+.cursor
+.venv
+.env
+.env.*
+!.env.example
+data
+third_party
+frontend
+src-tauri
+tests
+scripts
+docs
+**/__pycache__
+.pytest_cache
+*.pyc
+Jarvis_Obsidian
+**/.obsidian

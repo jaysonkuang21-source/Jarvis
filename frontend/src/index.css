@@ -1,0 +1,275 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Bahnschrift', 'Segoe UI', 'Helvetica Neue', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', ui-monospace, 'Consolas', monospace;
+  --font-display: 'Bahnschrift', 'Segoe UI Condensed', 'Arial Narrow', ui-sans-serif, sans-serif;
+
+  --radius: 0.25rem;
+}
+
+/*
+ * JARVIS command-center palette: navy grid, teal healthy, red critical.
+ * Dark is the intended ops look; light is a cooled day variant of the same system.
+ */
+:root {
+  --background: oklch(0.96 0.01 230);
+  --foreground: oklch(0.2 0.03 250);
+  --muted: oklch(0.92 0.015 230);
+  --muted-foreground: oklch(0.45 0.03 240);
+  --card: oklch(0.98 0.008 230 / 0.9);
+  --border: oklch(0.55 0.05 200 / 0.35);
+  --input: oklch(0.94 0.012 230);
+  --primary: oklch(0.55 0.12 185);
+  --primary-foreground: oklch(0.98 0.005 230);
+  --accent: oklch(0.9 0.03 200);
+  --accent-foreground: oklch(0.3 0.06 200);
+  --destructive: oklch(0.55 0.2 25);
+  --warning: oklch(0.65 0.14 75);
+  --success: oklch(0.55 0.12 185);
+  --ring: oklch(0.55 0.12 185 / 0.4);
+  --critical: oklch(0.55 0.2 25);
+  --info: oklch(0.3 0.03 240);
+  --grid-line: oklch(0.5 0.04 220 / 0.15);
+  --glow-teal: oklch(0.55 0.12 185 / 0.25);
+  --glow-red: oklch(0.55 0.2 25 / 0.25);
+}
+
+.dark {
+  --background: oklch(0.11 0.028 250);
+  --foreground: oklch(0.94 0.01 210);
+  --muted: oklch(0.17 0.032 250);
+  --muted-foreground: oklch(0.66 0.035 220);
+  --card: oklch(0.14 0.03 250 / 0.85);
+  --border: oklch(0.45 0.07 200 / 0.38);
+  --input: oklch(0.19 0.03 250);
+  --primary: oklch(0.74 0.14 185);
+  --primary-foreground: oklch(0.11 0.028 250);
+  --accent: oklch(0.22 0.045 200);
+  --accent-foreground: oklch(0.88 0.08 185);
+  --destructive: oklch(0.64 0.22 25);
+  --warning: oklch(0.8 0.15 75);
+  --success: oklch(0.74 0.14 185);
+  --ring: oklch(0.74 0.14 185 / 0.5);
+  --critical: oklch(0.64 0.22 25);
+  --info: oklch(0.94 0.015 210);
+  --grid-line: oklch(0.5 0.06 200 / 0.14);
+  --glow-teal: oklch(0.74 0.14 185 / 0.4);
+  --glow-red: oklch(0.64 0.22 25 / 0.45);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-ring: var(--ring);
+  --color-critical: var(--critical);
+  --color-info: var(--info);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  --font-display: var(--font-display);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Ops grid backdrop for the command center. */
+  .ops-grid {
+    background-color: var(--color-background);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .panel-ops {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    backdrop-filter: blur(8px);
+  }
+
+  .text-critical {
+    color: var(--color-critical);
+  }
+
+  .border-critical {
+    border-color: color-mix(in oklch, var(--color-critical) 55%, transparent);
+  }
+
+  .glow-teal {
+    box-shadow: 0 0 24px var(--glow-teal);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 28px var(--glow-red);
+  }
+
+  /* Caret that follows streamed text, so a slow model still looks alive. */
+  .streaming-caret::after {
+    content: '';
+    display: inline-block;
+    width: 0.5ch;
+    height: 1em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    background-color: currentColor;
+    opacity: 0.7;
+    animation: caret-blink 1.1s steps(1) infinite;
+  }
+
+  @keyframes caret-blink {
+    0%,
+    49% {
+      opacity: 0.7;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes hub-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes hub-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes hub-ring-breathe {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+
+  @keyframes orbit-dot {
+    from {
+      offset-distance: 0%;
+    }
+    to {
+      offset-distance: 100%;
+    }
+  }
+
+  @keyframes signal-scan {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /*
+   * Continuous radar from load (STANDBY): .hub-armed is always applied on the
+   * hub root. Speaking adds breathe as a SECOND animation; do not replace
+   * rotate via a later single-animation rule (rings also carry .hub-ring-breathe).
+   */
+  .hub-armed .hub-ring-spin {
+    animation: hub-rotate 28s linear infinite;
+  }
+
+  .hub-armed .hub-ring-spin-rev {
+    animation: hub-rotate 42s linear infinite reverse;
+  }
+
+  .hub-armed.hub-speaking .hub-ring-spin {
+    animation:
+      hub-rotate 28s linear infinite,
+      hub-ring-breathe 1.6s ease-in-out infinite;
+  }
+
+  .hub-armed.hub-speaking .hub-ring-spin-rev {
+    animation:
+      hub-rotate 42s linear infinite reverse,
+      hub-ring-breathe 1.6s ease-in-out infinite;
+  }
+
+  .hub-armed .hub-scan {
+    animation: signal-scan 6s linear infinite;
+  }
+
+  /* Stronger pulse only while actively speaking. */
+  .hub-speaking .hub-core-glow {
+    animation: hub-pulse 1.2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hub-armed .hub-ring-spin,
+    .hub-armed .hub-ring-spin-rev,
+    .hub-armed.hub-speaking .hub-ring-spin,
+    .hub-armed.hub-speaking .hub-ring-spin-rev,
+    .hub-armed .hub-scan,
+    .hub-speaking .hub-core-glow {
+      animation: none;
+    }
+  }
+}

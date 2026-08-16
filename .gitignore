@@ -1,0 +1,57 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets — never commit (local + Vercel/Render inject at deploy)
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.demo.example
+!.env*.example
+*.local
+
+# Vendored Fish Speech clone (Docker build source only)
+third_party/
+
+# Local runtime data (models, SQLite, caches, trash) — never commit
+data/
+# Local Fish Speech weights + cloned reference voices (large / copyrighted)
+data/fish-speech/
+
+# Cursor / IDE local project state
+.cursor/
+.pytest_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/node_modules/.tmp/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+src-tauri/binaries/jarvis-sidecar*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Obsidian vault(s) — never commit notes or Local REST plugin secrets
+# (API keys / TLS private keys live under .obsidian/plugins/**/data.json).
+Jarvis_Obsidian/
+**/Jarvis_Obsidian/
+.obsidian/
+**/.obsidian/
