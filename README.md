@@ -19,6 +19,7 @@ Open the demo link above. That is the whole path from “curious” to “trying
 - Chat grounded in vault notes with citations you can open
 - Hybrid retrieval: Postgres + pgvector (ANN/HNSW) fused with full-text search via RRF, then optional LLM rerank
 - Demo ingestion: upload or paste docs into `demo/vault/Inbox`, reindex, inspect chunks
+- Chunking Demonstrations: Recursive, semantic, structural, claim-centered
 - Machine-enforced policy from `config/rules.md` (not just prompt text)
 - Desktop shell (Tauri): tray, timers/toasts, FastAPI sidecar with session API auth
 - Bring-your-own LLM key in the public demo (GPT-4o mini locked; no shared chat key on the server)
