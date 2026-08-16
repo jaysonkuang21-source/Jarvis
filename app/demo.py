@@ -3,7 +3,8 @@
 When ``JARVIS_DEMO_MODE`` is on, the process forces a single OpenAI chat
 model, rejects model/provider profile edits, and scrubs paths from APIs.
 Chat uses per-request BYOK (``X-Jarvis-User-LLM-Key``), never a shared
-server OpenAI key for user turns.
+server OpenAI key for user turns. Public demo is login-free; abuse controls
+are rate limits plus a small per-IP concurrent seat cap.
 """
 
 from __future__ import annotations
@@ -68,7 +69,8 @@ def apply_demo_settings_overrides(settings: Settings) -> None:
     settings.ollama_warm_on_boot = False
     settings.langsmith_tracing_v2 = False
     settings.model_metrics_online = False
-    settings.allow_unauthenticated_api = False
+    # Public demo is open (no Supabase login); seats + BYOK + rate limits apply.
+    settings.allow_unauthenticated_api = True
 
     # Tighten defaults unless the operator already set stricter values.
     if settings.rate_limit == "60/minute":

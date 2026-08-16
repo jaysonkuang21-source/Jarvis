@@ -434,7 +434,7 @@ export function DocumentIngestPanel({
                             {wikilinks.map((link) => (
                               <Badge
                                 key={`link-${link}`}
-                                variant="secondary"
+                                variant="default"
                                 className="h-5 px-1.5 font-mono text-[10px]"
                               >
                                 [[{link}]]

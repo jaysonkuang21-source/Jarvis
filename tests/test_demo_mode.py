@@ -95,12 +95,22 @@ def test_demo_system_scrubs_hardware(demo_client: TestClient) -> None:
 
 
 def test_demo_rejects_model_profile_put(demo_client: TestClient) -> None:
-    """PUT /api/profile is fully forbidden in demo mode."""
+    """PUT /api/profile rejects locked model fields in demo mode."""
     current = demo_client.get("/api/profile").json()
     current["chat_model"] = "gpt-4o"
     response = demo_client.put("/api/profile", json=current)
     assert response.status_code == 403
-    assert "cannot be edited" in response.json()["error"].lower()
+    assert "cannot edit" in response.json()["error"].lower() or "locked" in response.json()["error"].lower()
+
+
+def test_demo_allows_ingest_profile_put(demo_client: TestClient) -> None:
+    """Demo may change ingest_effort while models stay locked."""
+    current = demo_client.get("/api/profile").json()
+    current["ingest_effort"] = "low"
+    response = demo_client.put("/api/profile", json=current)
+    assert response.status_code == 200
+    assert response.json()["ingest_effort"] == "low"
+    assert response.json()["chat_model"] == DEMO_CHAT_MODEL
 
 
 def test_demo_rejects_timers(demo_client: TestClient) -> None:
@@ -125,14 +135,21 @@ def test_demo_rejects_voice(demo_client: TestClient) -> None:
     assert response.status_code == 403
 
 
-def test_demo_rejects_non_operator_reindex(
+def test_demo_operator_reindex_allowed(
     demo_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Demo reindex is forbidden when the caller is not the process API token."""
-    monkeypatch.setattr("app.main._is_process_api_token", lambda _request: False)
-    response = demo_client.post("/api/index/reindex", json={})
-    assert response.status_code == 403
-    assert "operator-only" in response.json()["error"].lower()
+    """Demo reindex is allowed for seated clients (shared sample + Inbox index)."""
+    seat = demo_client.post(
+        "/api/demo/seat", headers={"Authorization": ""}
+    ).json()["seat_id"]
+    # Without DATABASE_URL the demo_client uses placeholder — expect 400 not 403.
+    response = demo_client.post(
+        "/api/index/reindex",
+        json={},
+        headers={"Authorization": "", "X-Jarvis-Demo-Seat": seat},
+    )
+    assert response.status_code in (200, 400, 409)
+    assert response.status_code != 403
 
 
 def test_demo_chat_requires_session_llm_key(demo_client: TestClient) -> None:
@@ -172,10 +189,13 @@ def test_demo_chat_binds_request_llm_key(
     assert "bound:sk-user-secret" in response.text
 
 
-def test_demo_chunks_list_forbidden(demo_client: TestClient) -> None:
-    """Chunk inspector API is disabled in demo mode."""
+def test_demo_chunks_list_allowed_with_seat(demo_client: TestClient) -> None:
+    """Chunk inspector API is available in demo when a seat is held."""
+    # Operator token on demo_client skips seat requirement.
     response = demo_client.get("/api/index/documents/chunks?path=Inbox/x.md")
-    assert response.status_code == 403
+    # No DB → 400; with DB would be 200. Never 403 in demo anymore.
+    assert response.status_code in (200, 400)
+    assert response.status_code != 403
 
 
 def test_assert_hosted_demo_posture_requires_demo() -> None:

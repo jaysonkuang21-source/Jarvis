@@ -43,7 +43,10 @@ def test_assert_token_for_exposure_requires_token() -> None:
     assert_token_for_exposure(
         allow_non_loopback=True, api_token=None, supabase_auth=True
     )
-    with pytest.raises(RuntimeError, match="JARVIS_API_TOKEN|Supabase"):
+    assert_token_for_exposure(
+        allow_non_loopback=True, api_token=None, demo_mode=True
+    )
+    with pytest.raises(RuntimeError, match="JARVIS_API_TOKEN|Supabase|DEMO_MODE"):
         assert_token_for_exposure(allow_non_loopback=True, api_token=None)
     with pytest.raises(RuntimeError, match="UNAUTHENTICATED"):
         assert_token_for_exposure(
@@ -51,6 +54,12 @@ def test_assert_token_for_exposure_requires_token() -> None:
             api_token="secret",
             allow_unauthenticated_api=True,
         )
+    assert_token_for_exposure(
+        allow_non_loopback=True,
+        api_token="secret",
+        allow_unauthenticated_api=True,
+        demo_mode=True,
+    )
 
 
 def test_parse_rate_limit() -> None:

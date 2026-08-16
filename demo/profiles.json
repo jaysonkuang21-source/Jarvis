@@ -10,7 +10,7 @@
   "rag_mode": "regular",
   "query_mode": "local",
   "ingest_mode": "regular",
-  "ingest_effort": "manual",
+  "ingest_effort": "low",
   "chunker": "recursive",
   "chunk_size": 700,
   "chunk_overlap": 100,

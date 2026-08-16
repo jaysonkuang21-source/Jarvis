@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { api, ApiError } from '@/lib/api/client'
 import type { ApiErrorCode } from '@/lib/api/errors'
 import type { Policy } from '@/lib/api/types'
+import { isDemoMode } from '@/lib/demo'
 
 const CAPABILITIES = [
   {
@@ -200,12 +201,20 @@ export function RulesEditor() {
           className="mt-1.5 font-mono text-xs"
           value={policy.vault_path}
           placeholder="D:\Notes\MyVault"
+          readOnly={isDemoMode}
+          disabled={isDemoMode}
           onChange={(event) => patch({ vault_path: event.target.value })}
         />
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Read and write paths resolve <code>{'${vault_path}'}</code> against this.
-          Indexing reads these files directly, so it works whether or not Obsidian
-          is running.
+          {isDemoMode
+            ? 'Fixed to demo/vault in public demo. Uploads land in Inbox/; chunks index into Supabase Postgres.'
+            : (
+              <>
+                Read and write paths resolve <code>{'${vault_path}'}</code> against
+                this. Indexing reads these files directly, so it works whether or
+                not Obsidian is running.
+              </>
+            )}
         </p>
       </section>
 
@@ -264,18 +273,25 @@ export function RulesEditor() {
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <div className="flex items-center gap-2">
-        <Button onClick={() => void save()} disabled={saving}>
-          {saving && <Loader2 className="size-3.5 animate-spin" />}
-          Save rules
-        </Button>
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-success">
-            <Check className="size-3.5" />
-            Saved and reloaded
-          </span>
-        )}
-      </div>
+      {!isDemoMode && (
+        <div className="flex items-center gap-2">
+          <Button onClick={() => void save()} disabled={saving}>
+            {saving && <Loader2 className="size-3.5 animate-spin" />}
+            Save rules
+          </Button>
+          {saved && (
+            <span className="flex items-center gap-1 text-xs text-success">
+              <Check className="size-3.5" />
+              Saved and reloaded
+            </span>
+          )}
+        </div>
+      )}
+      {isDemoMode && (
+        <p className="text-xs text-muted-foreground">
+          Policy editing is locked in demo mode. Vault path stays <code>demo/vault</code>.
+        </p>
+      )}
     </div>
   )
 }

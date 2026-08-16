@@ -22,6 +22,7 @@ import type {
   TtsStatus,
 } from './types'
 import { isDemoMode } from '@/lib/demo'
+import { demoSeatHeaders, getDemoSeatId, setDemoSeatId } from '@/lib/demoSeat'
 import { sessionLlmHeaders } from '@/lib/sessionLlm'
 
 // Vite proxies /api in local dev. Demo/production builds may point at Render
@@ -37,7 +38,7 @@ const BASE = API_ORIGIN ? `${API_ORIGIN}/api` : '/api'
  * Session API token for Bearer / X-Jarvis-Token (module memory only).
  * Never log this value, never write it to localStorage/sessionStorage, and
  * never put it in URL query strings. Prefer the Tauri-minted token in
- * desktop builds; demo builds use the Supabase access token instead.
+ * desktop builds; demo builds are login-free (seat + BYOK headers only).
  */
 let apiToken: string | null = null
 
@@ -50,17 +51,12 @@ export function setApiToken(token: string | null): void {
 /**
  * Resolve the API token for protected routes.
  *
- * Demo builds prefer the live Supabase access token. Desktop prefers Tauri
- * ``get_api_token``. Browser Vite falls back to ``VITE_JARVIS_API_TOKEN``.
+ * Demo builds skip login tokens. Desktop prefers Tauri ``get_api_token``.
+ * Browser Vite falls back to ``VITE_JARVIS_API_TOKEN``.
  */
 export async function bootstrapApiToken(): Promise<void> {
   if (isDemoMode) {
-    try {
-      const { getAccessToken } = await import('@/lib/supabase')
-      setApiToken(await getAccessToken())
-    } catch {
-      setApiToken(null)
-    }
+    setApiToken(null)
     return
   }
 
@@ -84,14 +80,57 @@ export async function bootstrapApiToken(): Promise<void> {
 /** Headers that carry the API token when one is configured (never logged). */
 function authHeaders(): Record<string, string> {
   if (!apiToken) return {}
-  // Demo uses Supabase JWT — only Bearer. Desktop also sends X-Jarvis-Token.
-  if (isDemoMode) {
-    return { Authorization: `Bearer ${apiToken}` }
-  }
   return {
     Authorization: `Bearer ${apiToken}`,
     'X-Jarvis-Token': apiToken,
   }
+}
+
+/** Demo-only headers: seat lease plus optional session LLM key. */
+function demoHeaders(): Record<string, string> {
+  if (!isDemoMode) return {}
+  return { ...demoSeatHeaders(), ...sessionLlmHeaders() }
+}
+
+/**
+ * Claim or refresh an anonymous demo seat for this browser (max 4 per IP).
+ * Persists the seat id in sessionStorage for later API calls.
+ */
+export async function claimDemoSeat(): Promise<string> {
+  const existing = getDemoSeatId()
+  let response: Response
+  try {
+    response = await fetch(`${BASE}/demo/seat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(existing ? { 'X-Jarvis-Demo-Seat': existing } : {}),
+      },
+    })
+  } catch {
+    throw new ApiError('Network error claiming demo seat', 0, 'backend_unreachable')
+  }
+  if (!response.ok) {
+    let detail = 'Demo seat limit reached for this network (4 users max).'
+    try {
+      const body = (await response.json()) as { detail?: string; error?: string }
+      if (typeof body.detail === 'string' && body.detail.trim()) {
+        detail = body.detail
+      } else if (typeof body.error === 'string' && body.error.trim()) {
+        detail = body.error
+      }
+    } catch {
+      // keep default
+    }
+    throw new ApiError(detail, response.status, 'rate_limited')
+  }
+  const body = (await response.json()) as { seat_id?: string }
+  const seatId = typeof body.seat_id === 'string' ? body.seat_id.trim() : ''
+  if (!seatId) {
+    throw new ApiError('Demo seat response missing seat_id', 500, 'unknown')
+  }
+  setDemoSeatId(seatId)
+  return seatId
 }
 
 export class ApiError extends Error {
@@ -112,6 +151,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...authHeaders(),
+    ...demoHeaders(),
   }
   let response: Response
   try {
@@ -379,6 +419,7 @@ export async function synthesizeSpeechStream(
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders(),
+        ...demoHeaders(),
       },
       body: JSON.stringify({ text }),
       signal,
@@ -435,7 +476,7 @@ export async function streamChat(options: ChatStreamOptions): Promise<void> {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
         ...authHeaders(),
-        ...(isDemoMode ? sessionLlmHeaders() : {}),
+        ...demoHeaders(),
       },
       body: JSON.stringify({
         message: options.message,
@@ -510,6 +551,7 @@ export async function streamVoice(options: ChatStreamOptions): Promise<void> {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
         ...authHeaders(),
+        ...demoHeaders(),
       },
       body: JSON.stringify({
         message: options.message,
@@ -634,6 +676,7 @@ export function subscribeEvents(
         headers: {
           Accept: 'text/event-stream',
           ...authHeaders(),
+          ...demoHeaders(),
         },
         signal: controller.signal,
       })

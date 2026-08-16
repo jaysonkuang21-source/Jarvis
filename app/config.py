@@ -114,8 +114,12 @@ class Settings(BaseSettings):
 
     # Public NASA Hackathime demo lockdown (forces GPT-4o mini, sample vault).
     demo_mode: bool = False
+    # Concurrent anonymous demo seats allowed per client IP (X-Forwarded-For).
+    demo_max_seats_per_ip: int = 4
+    # Idle TTL for a demo seat before it can be reused by another browser.
+    demo_seat_ttl_seconds: int = 1800
 
-    # Supabase Auth (demo / hosted). Verify user JWTs via Auth HTTP API.
+    # Optional Supabase Auth (legacy demo login). Public demo is open + seats.
     supabase_url: str = ""
     supabase_anon_key: SecretStr | None = None
 
@@ -319,19 +323,20 @@ def assert_token_for_exposure(
     api_token: str | None,
     allow_unauthenticated_api: bool = False,
     supabase_auth: bool = False,
+    demo_mode: bool = False,
 ) -> None:
-    """Refuse exposed or open binds that lack API token or Supabase Auth."""
-    if allow_non_loopback and not api_token and not supabase_auth:
+    """Refuse exposed binds that lack auth unless demo lockdown is on."""
+    if allow_non_loopback and not api_token and not supabase_auth and not demo_mode:
         msg = (
-            "JARVIS_ALLOW_NON_LOOPBACK=true requires JARVIS_API_TOKEN "
-            "or Supabase Auth (JARVIS_SUPABASE_URL + JARVIS_SUPABASE_ANON_KEY). "
+            "JARVIS_ALLOW_NON_LOOPBACK=true requires JARVIS_API_TOKEN, "
+            "Supabase Auth, or JARVIS_DEMO_MODE=true. "
             "Refusing to start with an unauthenticated non-loopback bind."
         )
         raise RuntimeError(msg)
-    if allow_unauthenticated_api and allow_non_loopback:
+    if allow_unauthenticated_api and allow_non_loopback and not demo_mode:
         msg = (
             "JARVIS_ALLOW_UNAUTHENTICATED_API cannot be combined with "
-            "JARVIS_ALLOW_NON_LOOPBACK."
+            "JARVIS_ALLOW_NON_LOOPBACK (except JARVIS_DEMO_MODE)."
         )
         raise RuntimeError(msg)
 

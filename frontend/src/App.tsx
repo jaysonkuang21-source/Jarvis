@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import {
   Bell,
   LayoutDashboard,
@@ -20,9 +20,8 @@ import { SettingsView } from '@/components/settings/SettingsView'
 import { TimersView } from '@/components/timers/TimersView'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { bootstrapApiToken, setApiToken } from '@/lib/api/client'
+import { bootstrapApiToken } from '@/lib/api/client'
 import { isDemoMode } from '@/lib/demo'
-import { clearSessionLlmCredentials } from '@/lib/sessionLlm'
 import { useAppStore, type View } from '@/stores/app'
 import { useChatStore } from '@/stores/chat'
 import { useProfileStore } from '@/stores/profile'
@@ -44,6 +43,7 @@ const FULL_NAV: { id: View; label: string; icon: typeof MessageSquare }[] = [
 
 const DEMO_NAV: { id: View; label: string; icon: typeof MessageSquare }[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 /** Root shell: desktop hub, or chat-only gated demo. */
@@ -53,10 +53,8 @@ export default function App() {
   const selectedCitation = useChatStore((state) => state.selectedCitation)
   const selectCitation = useChatStore((state) => state.selectCitation)
   const loadProfile = useProfileStore((state) => state.load)
-
-  const [authLoading, setAuthLoading] = useState(isDemoMode)
-  const [signedIn, setSignedIn] = useState(!isDemoMode)
-  const [email, setEmail] = useState<string | null>(null)
+  const [demoSeatReady, setDemoSeatReady] = useState(!isDemoMode)
+  const onDemoSeatReady = useCallback(() => setDemoSeatReady(true), [])
 
   useEffect(() => {
     if (!isDemoMode) return
@@ -65,28 +63,7 @@ export default function App() {
   }, [setView])
 
   useEffect(() => {
-    if (!isDemoMode) return
-    let stop = () => {}
-    void import('@/lib/supabase').then(({ onAuthSession }) => {
-      stop = onAuthSession((session) => {
-        const token = session?.access_token ?? null
-        setApiToken(token)
-        setSignedIn(Boolean(session))
-        setEmail(session?.user?.email ?? null)
-        setAuthLoading(false)
-        if (!session) {
-          clearSessionLlmCredentials()
-        }
-        if (session) {
-          void loadProfile()
-        }
-      })
-    })
-    return () => stop()
-  }, [loadProfile])
-
-  useEffect(() => {
-    if (isDemoMode) return
+    if (!demoSeatReady) return
     let cancelled = false
     let stop = () => {}
     void (async () => {
@@ -100,23 +77,7 @@ export default function App() {
       cancelled = true
       stop()
     }
-  }, [init, loadProfile])
-
-  useEffect(() => {
-    if (!isDemoMode || !signedIn) return
-    let cancelled = false
-    let stop = () => {}
-    void (async () => {
-      await bootstrapApiToken()
-      if (cancelled) return
-      stop = init()
-      void loadProfile()
-    })()
-    return () => {
-      cancelled = true
-      stop()
-    }
-  }, [init, loadProfile, signedIn])
+  }, [demoSeatReady, init, loadProfile])
 
   const nav = isDemoMode ? DEMO_NAV : FULL_NAV
   const showCitations =
@@ -209,7 +170,7 @@ export default function App() {
             <ChatView />
           </ErrorBoundary>
         )}
-        {!isDemoMode && view === 'settings' && (
+        {view === 'settings' && (
           <ErrorBoundary label="Settings" onReset={() => openSettings()}>
             <SettingsView />
           </ErrorBoundary>
@@ -279,13 +240,7 @@ export default function App() {
             </div>
           }
         >
-          <DemoAuthGate
-            email={email}
-            loading={authLoading}
-            signedIn={signedIn}
-          >
-            {shell}
-          </DemoAuthGate>
+          <DemoAuthGate onSeatReady={onDemoSeatReady}>{shell}</DemoAuthGate>
         </Suspense>
       ) : (
         shell

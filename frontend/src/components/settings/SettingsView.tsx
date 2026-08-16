@@ -24,6 +24,7 @@ import {
 import { RulesEditor } from './RulesEditor'
 import { SystemSpecsBanner } from './SystemSpecsBanner'
 import { useEffect, useState } from 'react'
+import { isDemoMode } from '@/lib/demo'
 
 type OptionChoice = { value: string; label: string; hint?: string }
 
@@ -112,6 +113,10 @@ export function SettingsView() {
   const [reindexing, setReindexing] = useState(false)
   const [reindexError, setReindexError] = useState<string | null>(null)
   const [retrying, setRetrying] = useState(false)
+
+  useEffect(() => {
+    if (isDemoMode) setSettingsTab('ingestion')
+  }, [setSettingsTab])
 
   const chatModels = options?.chat_models ?? []
   const embeddingModels = options?.embedding_models ?? []

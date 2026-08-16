@@ -141,11 +141,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         api_token=settings.resolved_api_token(),
         allow_unauthenticated_api=settings.allow_unauthenticated_api,
         supabase_auth=supabase_auth_configured(settings),
+        demo_mode=settings.demo_mode,
     )
     if settings.demo_mode:
         logger.info(
             "Demo mode enabled: chat locked to GPT-4o mini; sample vault; "
-            "session BYOK required for chat"
+            "no login; session BYOK required for chat; max %s seats/IP",
+            settings.demo_max_seats_per_ip,
         )
     # Reload so tests / env overrides always pick the active rules_path.
     get_policy_engine().reload()
@@ -278,6 +280,7 @@ app.add_middleware(
         "X-Jarvis-Token",
         "X-Jarvis-User-LLM-Key",
         "X-Jarvis-User-LLM-Base-Url",
+        "X-Jarvis-Demo-Seat",
     ],
 )
 
@@ -364,7 +367,7 @@ class MultiRateLimiter:
         so a leaked remote token cannot empty the process, but does not burn
         the shared IP bucket used for untrusted clients.
         """
-        host = request.client.host if request.client else "unknown"
+        host = _client_ip(request)
         ip_key = f"ip:{host}"
         presented = _presented_api_token(request)
         expected = get_settings().resolved_api_token()
@@ -427,6 +430,22 @@ def _build_rate_limiter() -> MultiRateLimiter:
 _rate_limiter = _build_rate_limiter()
 _RATE_LIMIT_EXEMPT = frozenset({"/api/health"})
 _AUTH_ALWAYS_OPEN = frozenset({"/api/health"})
+_DEMO_SEAT_EXEMPT = frozenset({"/api/health", "/api/demo/seat"})
+DEMO_SEAT_HEADER = "X-Jarvis-Demo-Seat"
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP; prefer first X-Forwarded-For hop in demo/proxy."""
+    settings = get_settings()
+    if settings.demo_mode or settings.allow_non_loopback:
+        forwarded = (request.headers.get("X-Forwarded-For") or "").strip()
+        if forwarded:
+            # Left-most is the original client when proxies append.
+            first = forwarded.split(",", 1)[0].strip()
+            if first:
+                return first
+    host = request.client.host if request.client else None
+    return host or "unknown"
 
 
 def _presented_api_token(request: Request) -> str:
@@ -545,7 +564,8 @@ async def api_token_middleware(request: Request, call_next):
     """Require a valid API token or Supabase session on protected routes.
 
     Registered last so it runs before rate limiting and can stash
-    ``request.state.auth_user_id`` for per-user budgets.
+    ``request.state.auth_user_id`` for per-user budgets. Demo mode is open
+    (login-free); operator tokens are still recognized when presented.
     """
     if not _requires_api_token(request):
         return await call_next(request)
@@ -564,6 +584,9 @@ async def api_token_middleware(request: Request, call_next):
         if user is not None:
             request.state.auth_user_id = user.id
             return await call_next(request)
+
+    if settings.demo_mode:
+        return await call_next(request)
 
     if expected or supabase_auth_configured(settings):
         return JSONResponse(
@@ -588,6 +611,46 @@ async def api_token_middleware(request: Request, call_next):
             ),
         ).model_dump(),
     )
+
+
+@app.middleware("http")
+async def demo_seat_middleware(request: Request, call_next):
+    """In demo mode, require a leased seat id for protected API routes."""
+    settings = get_settings()
+    path = request.url.path
+    if not settings.demo_mode or path in _DEMO_SEAT_EXEMPT:
+        return await call_next(request)
+    if not path.startswith("/api/"):
+        return await call_next(request)
+    if _is_process_api_token(request):
+        return await call_next(request)
+
+    from app.demo_seats import get_demo_seat_registry
+
+    seat_id = (request.headers.get(DEMO_SEAT_HEADER) or "").strip()
+    if not seat_id:
+        return JSONResponse(
+            status_code=429,
+            content=ErrorResponse(
+                error="demo_seat_required",
+                detail=(
+                    "Demo seat required. Call POST /api/demo/seat first "
+                    f"(max {settings.demo_max_seats_per_ip} users per IP)."
+                ),
+            ).model_dump(),
+        )
+
+    registry = get_demo_seat_registry()
+    result = await registry.claim(_client_ip(request), seat_id)
+    if not result.ok:
+        return JSONResponse(
+            status_code=429,
+            content=ErrorResponse(
+                error="demo_seat_limit",
+                detail=result.detail or "Demo seat limit reached",
+            ).model_dump(),
+        )
+    return await call_next(request)
 
 
 @app.exception_handler(HTTPException)
@@ -663,6 +726,34 @@ def _reject_oversized_body(request: Request, *, limit: int | None = None) -> Non
 # ---------------------------------------------------------------------------
 # Health and options
 # ---------------------------------------------------------------------------
+
+
+@app.post("/api/demo/seat")
+async def claim_demo_seat(request: Request) -> dict[str, object]:
+    """Lease or refresh an anonymous demo seat for this client IP.
+
+    Returns a seat id the client must send as ``X-Jarvis-Demo-Seat`` on later
+    API calls. At most ``demo_max_seats_per_ip`` concurrent seats per IP.
+    """
+    settings = get_settings()
+    if not settings.demo_mode:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    from app.demo_seats import get_demo_seat_registry
+
+    existing = (request.headers.get(DEMO_SEAT_HEADER) or "").strip() or None
+    result = await get_demo_seat_registry().claim(_client_ip(request), existing)
+    if not result.ok or not result.seat_id:
+        raise HTTPException(
+            status_code=429,
+            detail=result.detail or "Demo seat limit reached",
+        )
+    return {
+        "seat_id": result.seat_id,
+        "seats_used": result.seats_used,
+        "seats_max": result.seats_max,
+        "ttl_seconds": settings.demo_seat_ttl_seconds,
+    }
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -877,22 +968,31 @@ async def get_profile() -> Profile:
 async def put_profile(profile: Profile) -> Profile:
     """Write the profile and audit any field diffs.
 
-    Demo mode rejects all profile writes so ``demo/profiles.json`` cannot
-    accumulate per-user state.
+    Demo mode allows ingest/chunker settings but rejects locked model fields
+    and always re-applies ``force_demo_profile`` before persist.
     """
-    if get_settings().demo_mode:
-        raise HTTPException(
-            403,
-            "Profile cannot be edited in demo mode.",
-        )
-
+    settings = get_settings()
     previous = _load_profile()
+    if settings.demo_mode:
+        from app.demo import force_demo_profile, locked_profile_field_changes
+
+        attempted = locked_profile_field_changes(
+            previous.model_dump(mode="json"),
+            profile.model_dump(mode="json"),
+        )
+        if attempted:
+            raise HTTPException(
+                403,
+                "Cannot edit locked demo fields: " + ", ".join(attempted),
+            )
+        profile = force_demo_profile(profile)
+
     before = previous.model_dump(mode="json")
     after = profile.model_dump(mode="json")
 
     changed = diff_mappings(before, after)
 
-    path = get_settings().profiles_path
+    path = settings.profiles_path
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
 
@@ -935,15 +1035,11 @@ class RulesPayload(BaseModel):
 async def get_rules() -> Policy:
     """Return the in-memory policy loaded from ``rules.md``.
 
-    Demo mode replaces absolute vault paths with a basename label.
+    Demo mode always reports the fixed sample vault path ``demo/vault``.
     """
     policy = get_policy_engine().policy
     if get_settings().demo_mode:
-        from app.demo import scrub_absolute_path
-
-        return policy.model_copy(
-            update={"vault_path": scrub_absolute_path(policy.vault_path) or "vault"}
-        )
+        return policy.model_copy(update={"vault_path": "demo/vault"})
     return policy
 
 
@@ -1009,15 +1105,8 @@ async def reindex(request: Request, force: bool = False) -> IndexStatus:
     """Start a background vault reindex into Postgres.
 
     Pass ``force=true`` to cancel an in-process job and clear a stuck flag.
-    In demo mode only the process ``JARVIS_API_TOKEN`` (operator) may reindex;
-    signed-in demo users cannot mutate the shared sample index.
     """
     settings = get_settings()
-    if settings.demo_mode and not _is_process_api_token(request):
-        raise HTTPException(
-            403,
-            "Reindex is operator-only in demo mode.",
-        )
     if not database_configured():
         raise HTTPException(400, "Set JARVIS_DATABASE_URL before reindexing.")
     profile = _load_profile()
@@ -1170,8 +1259,6 @@ async def ingest_note_paste(request: Request, payload: IngestNoteRequest) -> Ing
     """Write a pasted note into ``Inbox/`` under the configured vault."""
     settings = get_settings()
     _reject_oversized_body(request, limit=settings.max_ingest_body_bytes)
-    if settings.demo_mode:
-        raise HTTPException(403, "Document ingest is disabled in demo mode.")
 
     from app.ingestion.formats import DocumentKind, RetrieverKind, kind_tag, retriever_tag
     from app.ingestion.inbox import InboxError, write_inbox_note
@@ -1206,8 +1293,6 @@ async def ingest_note_upload(
     """Accept any file type; convert to Inbox notes and pick a retriever tag."""
     settings = get_settings()
     _reject_oversized_body(request, limit=settings.max_ingest_body_bytes)
-    if settings.demo_mode:
-        raise HTTPException(403, "Document ingest is disabled in demo mode.")
 
     from app.ingestion.inbox import (
         InboxError,
@@ -1287,12 +1372,7 @@ class DocumentChunksResponse(BaseModel):
 
 @app.get("/api/index/documents", response_model=IndexedDocumentsResponse)
 async def list_indexed_documents() -> IndexedDocumentsResponse:
-    """List every indexed document so Settings can inspect chunks across sessions.
-
-    Disabled in demo mode. Requires Postgres.
-    """
-    if get_settings().demo_mode:
-        raise HTTPException(403, "Document listing is disabled in demo mode.")
+    """List every indexed document so Settings can inspect chunks across sessions."""
     if not database_configured():
         raise HTTPException(400, "Set JARVIS_DATABASE_URL before listing documents.")
 
@@ -1311,10 +1391,7 @@ async def list_document_chunks(
     """List indexed chunks for a vault-relative path (desktop chunk inspector).
 
     ``total`` is always the full count; ``chunks`` may be capped by ``limit``.
-    Disabled in demo mode.
     """
-    if get_settings().demo_mode:
-        raise HTTPException(403, "Chunk listing is disabled in demo mode.")
     if not database_configured():
         raise HTTPException(400, "Set JARVIS_DATABASE_URL before listing chunks.")
     trimmed = path.strip().replace("\\", "/")
@@ -1349,17 +1426,21 @@ class DeleteDocumentResponse(BaseModel):
 @app.delete("/api/index/documents", response_model=DeleteDocumentResponse)
 async def delete_indexed_document(payload: DeleteDocumentRequest) -> DeleteDocumentResponse:
     """Drop a document from the Postgres index; optionally trash vault files."""
-    if get_settings().demo_mode:
-        raise HTTPException(403, "Document removal is disabled in demo mode.")
-
     from app.ingestion.remove import RemoveDocumentError, remove_indexed_document
 
     policy = get_policy_engine()
+    # Demo: drop index rows; keep vault files so the shared sample set stays intact
+    # unless the note lives under Inbox (user uploads).
+    delete_vault = payload.delete_vault_files
+    if get_settings().demo_mode:
+        path = (payload.path or "").replace("\\", "/")
+        delete_vault = path.startswith("Inbox/") and payload.delete_vault_files
+
     try:
         result = remove_indexed_document(
             policy,
             path=payload.path,
-            delete_vault_files=payload.delete_vault_files,
+            delete_vault_files=delete_vault,
         )
     except RemoveDocumentError as exc:
         raise HTTPException(400, str(exc)) from exc

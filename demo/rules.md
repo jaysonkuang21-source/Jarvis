@@ -5,14 +5,15 @@ allow_download: false
 allow_shell: false
 allow_network: false
 allow_email_send: false
-allow_vault_write: false
+allow_vault_write: true
 
 vault_path: "demo/vault"
 
 allowed_read_paths:
   - "${vault_path}"
 
-allowed_write_paths: []
+allowed_write_paths:
+  - "${vault_path}/Inbox"
 
 denied_paths:
   - "./config"
