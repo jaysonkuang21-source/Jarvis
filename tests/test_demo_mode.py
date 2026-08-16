@@ -50,9 +50,13 @@ def demo_client(
 
 def test_force_demo_profile_locks_openai_mini() -> None:
     """Demo profile pin forces GPT-4o mini on OpenAI for chat and embeds."""
+    from app.demo import DEMO_EMBED_MODEL
+
     profile = force_demo_profile(Profile())
     assert profile.chat_model == DEMO_CHAT_MODEL
     assert profile.chat_provider is Provider.OPENAI
+    assert profile.embedding_model == DEMO_EMBED_MODEL
+    assert profile.embedding_model == "text-embedding-3-small"
     assert profile.embedding_provider is Provider.OPENAI
     assert profile.rag_mode.value == "regular"
 

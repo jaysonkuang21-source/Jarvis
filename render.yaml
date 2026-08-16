@@ -27,11 +27,11 @@ services:
       - key: JARVIS_TTS_AUTOSTART
         value: "false"
       - key: JARVIS_RATE_LIMIT
-        value: "20/minute"
-      - key: JARVIS_RATE_LIMIT_PER_USER
         value: "30/minute"
+      - key: JARVIS_RATE_LIMIT_PER_USER
+        value: "45/minute"
       - key: JARVIS_RATE_LIMIT_GLOBAL
-        value: "200/minute"
+        value: "300/minute"
       - key: JARVIS_OPENAI_API_KEY
         sync: false
       - key: JARVIS_DATABASE_URL

@@ -72,13 +72,13 @@ def apply_demo_settings_overrides(settings: Settings) -> None:
     # Public demo is open (no Supabase login); seats + BYOK + rate limits apply.
     settings.allow_unauthenticated_api = True
 
-    # Tighten defaults unless the operator already set stricter values.
+    # Tighten defaults unless the operator already set custom values.
+    # Demo caps are +50% vs the previous 20/30/200 demo defaults.
     if settings.rate_limit == "60/minute":
-        settings.rate_limit = "20/minute"
+        settings.rate_limit = "30/minute"
     if settings.rate_limit_per_user == "120/minute":
-        settings.rate_limit_per_user = "30/minute"
-    if settings.rate_limit_global == "300/minute":
-        settings.rate_limit_global = "200/minute"
+        settings.rate_limit_per_user = "45/minute"
+    # Global stays at the stock 300/minute default (was 200 in older demos).
 
     # Always pin demo assets when present so a dashboard JARVIS_RULES_PATH
     # cannot accidentally point at a personal desktop policy file.
