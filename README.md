@@ -1,6 +1,6 @@
 <img width="1243" height="1264" alt="image" src="https://github.com/user-attachments/assets/2c52a21a-4d7e-4547-8fce-1b6f331bf6d8" /># Jarvis
 
-An Obsidian-backed personal assistant that answers from your notes, with a desktop shell and a public BYOK demo.
+An Obsidian-backed personal assistant that answers from your notes, with a desktop shell and a public BYOK demo. It is originally based off using an Obsidian vault kind of as a Graph DB to store relationships paired with vector database in for general querying.
 
 ![Jarvis demo — paste a session API key to chat against a sample vault](docs/assets/demo.png)
 
@@ -15,6 +15,11 @@ This demo is mainly used to test different chunking methods and the RAG feature 
 ## Quick start
 
 Open the demo link above. That is the whole path from “curious” to “trying it.”
+
+## Notes
+- I did use A.I to build frontend stuff and for creating tests/logger stuff
+- I architected and made most of the chunkers with some help from A.I for claim-centered and structural chunking
+- I did architect the whole pipeline including hybrid search, caching, chunking, embedding, database setup, API setup, chunk metadata, query rewriting
 
 ## Features
 
